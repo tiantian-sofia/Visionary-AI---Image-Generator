@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import {
   Image as ImageIcon,
@@ -58,7 +58,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [finalPrompt, setFinalPrompt] = useState('');
   const [isManualPrompt, setIsManualPrompt] = useState(false);
-  const resultRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState<'form' | 'generating' | 'result'>('form');
 
   // Auto-sync prompt when inputs change, unless in manual mode
   useMemo(() => {
@@ -87,6 +87,7 @@ export default function App() {
     setIsGenerating(true);
     setError(null);
     setGeneratedImage(null);
+    setPage('generating');
 
     try {
       const response = await fetch('/api/generate-image', {
@@ -106,10 +107,7 @@ export default function App() {
 
       if (data.image) {
         setGeneratedImage(data.image);
-        // Smooth scroll to result
-        setTimeout(() => {
-          resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        setPage('result');
       } else {
         throw new Error('No image was generated. Please try a different prompt.');
       }
@@ -117,6 +115,7 @@ export default function App() {
       console.error('Generation error:', err);
       let message = err.message || 'An unexpected error occurred during generation.';
       setError(message);
+      setPage('form');
     } finally {
       setIsGenerating(false);
     }
@@ -128,6 +127,13 @@ export default function App() {
     link.href = generatedImage;
     link.download = `visionary-ai-${Date.now()}.png`;
     link.click();
+  };
+
+  const handleStartOver = () => {
+    setGeneratedImage(null);
+    setDescription('');
+    setError(null);
+    setPage('form');
   };
 
   const addRow = () => {
@@ -161,6 +167,91 @@ export default function App() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
       </div>
 
+      <AnimatePresence mode="wait">
+        {/* Generating Page */}
+        {page === 'generating' && (
+          <motion.div
+            key="generating"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative min-h-screen flex flex-col items-center justify-center px-6"
+          >
+            <div className="relative mb-8">
+              <div className="w-20 h-20 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+              <ImageIcon className="w-8 h-8 text-orange-500 absolute inset-0 m-auto animate-pulse" />
+            </div>
+            <p className="text-2xl font-medium text-white/80 mb-2">Crafting your vision...</p>
+            <p className="text-sm text-white/40">This usually takes 10-20 seconds</p>
+            <p className="mt-6 text-xs text-white/20 max-w-md text-center font-mono">{finalPrompt}</p>
+          </motion.div>
+        )}
+
+        {/* Result Page */}
+        {page === 'result' && generatedImage && (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative min-h-screen flex flex-col items-center justify-center px-6 py-12"
+          >
+            <div className="max-w-3xl w-full space-y-8">
+              <div className="relative group">
+                <img
+                  src={generatedImage}
+                  alt="Generated vision"
+                  className="w-full rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-8">
+                  <button
+                    onClick={downloadImage}
+                    className="p-4 rounded-full bg-white text-black hover:scale-110 transition-transform shadow-xl"
+                    title="Download Image"
+                  >
+                    <Download className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all border border-white/20"
+                    title="Regenerate"
+                  >
+                    <RefreshCw className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-white/20 text-center font-mono max-w-lg mx-auto">{finalPrompt}</p>
+
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <button
+                  onClick={downloadImage}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PNG
+                </button>
+                <button
+                  onClick={handleStartOver}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium text-white/60"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Create New
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Form Page */}
+        {page === 'form' && (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
       <main className="relative max-w-5xl mx-auto px-6 py-12 lg:py-20">
         {/* Header */}
         <header className="mb-12 text-center">
@@ -401,93 +492,6 @@ export default function App() {
           </aside>
         </div>
 
-        {/* Result Section */}
-        <section ref={resultRef} className="mt-16">
-          <AnimatePresence mode="wait">
-            {isGenerating ? (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="aspect-square max-w-2xl mx-auto rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-6"
-                style={{ aspectRatio: selectedRatio.id.split('x').join('/') }}
-              >
-                <div className="relative">
-                  <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
-                  <ImageIcon className="w-6 h-6 text-orange-500 absolute inset-0 m-auto animate-pulse" />
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-medium text-white/80">Crafting your vision...</p>
-                  <p className="text-sm text-white/40">This usually takes 10-20 seconds</p>
-                </div>
-              </motion.div>
-            ) : generatedImage ? (
-              <motion.div
-                key="result"
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                <div className="relative group max-w-2xl mx-auto">
-                  <img
-                    src={generatedImage}
-                    alt="Generated vision"
-                    className="w-full rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-8">
-                    <button
-                      onClick={downloadImage}
-                      className="p-4 rounded-full bg-white text-black hover:scale-110 transition-transform shadow-xl"
-                      title="Download Image"
-                    >
-                      <Download className="w-6 h-6" />
-                    </button>
-                    <button
-                      onClick={handleGenerate}
-                      className="p-4 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-all border border-white/20"
-                      title="Regenerate"
-                    >
-                      <RefreshCw className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap items-center justify-center gap-4">
-                  <button
-                    onClick={downloadImage}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download PNG
-                  </button>
-                  <button
-                    onClick={() => {
-                      setGeneratedImage(null);
-                      setDescription('');
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium text-white/60"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Start Over
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="aspect-square max-w-2xl mx-auto rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-4 text-white/20"
-                style={{ aspectRatio: selectedRatio.id.split('x').join('/') }}
-              >
-                <ImageIcon className="w-12 h-12" />
-                <p className="text-sm uppercase tracking-widest font-medium">Your creation will appear here</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
       </main>
 
       {/* Footer */}
@@ -496,6 +500,9 @@ export default function App() {
           Visionary AI &copy; 2024 &bull; Built with OpenAI DALL-E 3
         </p>
       </footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
