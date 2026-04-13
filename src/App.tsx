@@ -17,6 +17,7 @@ import AspectRatioSelector from './components/AspectRatioSelector';
 import PromptPreview from './components/PromptPreview';
 import GenerateButton from './components/GenerateButton';
 import Footer from './components/Footer';
+import MockupPage from './components/MockupPage';
 
 export default function App() {
   const [description, setDescription] = useState('');
@@ -30,7 +31,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [finalPrompt, setFinalPrompt] = useState('');
   const [isManualPrompt, setIsManualPrompt] = useState(false);
-  const [page, setPage] = useState<'form' | 'generating' | 'result'>('form');
+  const [page, setPage] = useState<'form' | 'generating' | 'result' | 'mockup'>('form');
 
   useMemo(() => {
     if (isManualPrompt) return;
@@ -192,6 +193,14 @@ export default function App() {
             handleGenerate={handleGenerate}
             handleModifyImage={handleModifyImage}
             handleStartOver={handleStartOver}
+            handleGoToMockup={() => setPage('mockup')}
+          />
+        )}
+
+        {page === 'mockup' && generatedImage && (
+          <MockupPage
+            generatedImage={generatedImage}
+            onBack={() => setPage('result')}
           />
         )}
 

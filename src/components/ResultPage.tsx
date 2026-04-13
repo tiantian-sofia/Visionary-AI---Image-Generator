@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Download, RefreshCw, MessageSquare, Pencil } from "lucide-react";
+import { Download, RefreshCw, MessageSquare, Pencil, Layout } from "lucide-react";
 
 interface ResultPageProps {
   generatedImage: string;
@@ -9,6 +9,7 @@ interface ResultPageProps {
   handleGenerate: () => void;
   handleModifyImage: () => void;
   handleStartOver: () => void;
+  handleGoToMockup: () => void;
 }
 
 export default function ResultPage({
@@ -19,6 +20,7 @@ export default function ResultPage({
   handleGenerate,
   handleModifyImage,
   handleStartOver,
+  handleGoToMockup,
 }: ResultPageProps) {
   return (
     <motion.div
@@ -89,6 +91,14 @@ export default function ResultPage({
             Create New
           </button>
         </div>
+
+        <button
+          onClick={handleGoToMockup}
+          className="w-full h-16 rounded-2xl flex items-center justify-center gap-3 text-lg font-bold bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-white/10 transition-all"
+        >
+          <Layout className="w-6 h-6" />
+          Generate Mockup
+        </button>
       </div>
     </motion.div>
   );
