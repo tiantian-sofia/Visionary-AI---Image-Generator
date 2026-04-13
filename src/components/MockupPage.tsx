@@ -12,12 +12,33 @@ import {
 } from "lucide-react";
 
 const MOCKUP_OPTIONS = [
-  { id: 'phone', label: 'Phone Mockup', icon: Smartphone },
-  { id: 'laptop', label: 'Laptop Mockup', icon: Monitor },
-  { id: 'profile', label: 'For Profile', icon: User },
+  {
+    id: 'phone',
+    label: 'Phone Mockup',
+    icon: Smartphone,
+    prompt: 'Place the provided image on a modern smartphone screen. Show the phone in a 3/4 angle view on a clean minimal background, photorealistic product mockup, professional presentation.',
+  },
+  {
+    id: 'laptop',
+    label: 'Laptop Mockup',
+    icon: Monitor,
+    prompt: 'Place the provided image on a modern laptop screen. Show the laptop in a 3/4 angle view on a clean minimal desk, photorealistic product mockup, professional presentation.',
+  },
+  {
+    id: 'profile',
+    label: 'For Profile',
+    icon: User,
+    prompt: 'Transform the provided image into a professional social media profile picture. Circular crop framing, clean background, polished and professional look.',
+  },
 ] as const;
 
 type MockupType = typeof MOCKUP_OPTIONS[number]['id'];
+
+interface MockupResult {
+  image: string | null;
+  loading: boolean;
+  error: string | null;
+}
 
 interface MockupPageProps {
   generatedImage: string;
@@ -27,7 +48,7 @@ interface MockupPageProps {
 export default function MockupPage({ generatedImage, onBack }: MockupPageProps) {
   const [selected, setSelected] = useState<Set<MockupType>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
-  const [mockupImage, setMockupImage] = useState<string | null>(null);
+  const [results, setResults] = useState<Map<MockupType, MockupResult>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const toggleOption = (id: MockupType) => {
@@ -39,32 +60,15 @@ export default function MockupPage({ generatedImage, onBack }: MockupPageProps) 
     });
   };
 
-  const handleGenerate = async () => {
-    if (selected.size === 0) {
-      setError('Please select at least one mockup type.');
-      return;
-    }
-
-    setIsGenerating(true);
-    setError(null);
-    setMockupImage(null);
-
-    const mockupTypes = Array.from(selected);
-    const promptParts = mockupTypes.map(type => {
-      if (type === 'phone') return 'displayed on a modern smartphone screen, phone mockup';
-      if (type === 'laptop') return 'displayed on a laptop screen, laptop mockup';
-      if (type === 'profile') return 'as a social media profile picture, circular crop';
-      return '';
-    });
-
-    const prompt = `Create a professional product mockup: the provided image ${promptParts.join(' and ')}, clean background, photorealistic, professional presentation`;
+  const generateOne = async (type: MockupType): Promise<MockupResult> => {
+    const option = MOCKUP_OPTIONS.find(o => o.id === type)!;
 
     try {
       const response = await fetch('/api/edit-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt,
+          prompt: option.prompt,
           image: generatedImage,
           size: '1024x1024',
         }),
@@ -77,25 +81,55 @@ export default function MockupPage({ generatedImage, onBack }: MockupPageProps) 
       }
 
       if (data.image) {
-        setMockupImage(data.image);
+        return { image: data.image, loading: false, error: null };
       } else {
-        throw new Error('No mockup was generated. Please try again.');
+        throw new Error('No mockup was generated.');
       }
     } catch (err: any) {
-      console.error('Mockup error:', err);
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setIsGenerating(false);
+      return { image: null, loading: false, error: err.message || 'Generation failed.' };
     }
   };
 
-  const downloadMockup = () => {
-    if (!mockupImage) return;
+  const handleGenerate = async () => {
+    if (selected.size === 0) {
+      setError('Please select at least one mockup type.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+
+    const types: MockupType[] = Array.from(selected);
+
+    // Set all selected to loading
+    const initial = new Map<MockupType, MockupResult>();
+    for (const type of types) {
+      initial.set(type, { image: null, loading: true, error: null });
+    }
+    setResults(initial);
+
+    // Generate all in parallel
+    const promises = types.map(async (type) => {
+      const result = await generateOne(type);
+      setResults(prev => {
+        const next = new Map(prev);
+        next.set(type, result);
+        return next;
+      });
+    });
+
+    await Promise.all(promises);
+    setIsGenerating(false);
+  };
+
+  const downloadMockup = (image: string, type: string) => {
     const link = document.createElement('a');
-    link.href = mockupImage;
-    link.download = `visionary-mockup-${Date.now()}.png`;
+    link.href = image;
+    link.download = `visionary-mockup-${type}-${Date.now()}.png`;
     link.click();
   };
+
+  const orderedResults = MOCKUP_OPTIONS.filter(o => results.has(o.id));
 
   return (
     <motion.div
@@ -128,11 +162,12 @@ export default function MockupPage({ generatedImage, onBack }: MockupPageProps) 
               <button
                 key={option.id}
                 onClick={() => toggleOption(option.id)}
+                disabled={isGenerating}
                 className={`flex items-center gap-3 px-6 py-4 rounded-2xl border-2 text-sm font-medium transition-all ${
                   isSelected
                     ? 'bg-orange-500/10 border-orange-500 text-white'
                     : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:border-white/20'
-                }`}
+                } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                   isSelected ? 'bg-orange-500 border-orange-500' : 'border-white/30'
@@ -173,12 +208,12 @@ export default function MockupPage({ generatedImage, onBack }: MockupPageProps) 
           {isGenerating ? (
             <>
               <Loader2 className="w-6 h-6 animate-spin" />
-              Generating Mockup...
+              Generating {selected.size} Mockup{selected.size > 1 ? 's' : ''}...
             </>
           ) : (
             <>
               <Sparkles className="w-6 h-6" />
-              Generate Mockup
+              Generate {selected.size > 0 ? `${selected.size} ` : ''}Mockup{selected.size > 1 ? 's' : ''}
             </>
           )}
         </button>
@@ -198,29 +233,63 @@ export default function MockupPage({ generatedImage, onBack }: MockupPageProps) 
           )}
         </AnimatePresence>
 
-        {/* Mockup result */}
-        {mockupImage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <img
-              src={mockupImage}
-              alt="Generated mockup"
-              className="w-full rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
-              referrerPolicy="no-referrer"
-            />
-            <div className="flex justify-center">
-              <button
-                onClick={downloadMockup}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium"
-              >
-                <Download className="w-4 h-4" />
-                Download Mockup
-              </button>
-            </div>
-          </motion.div>
+        {/* Mockup results */}
+        {orderedResults.length > 0 && (
+          <div className="space-y-10">
+            {orderedResults.map((option) => {
+              const result = results.get(option.id)!;
+              const Icon = option.icon;
+              return (
+                <motion.div
+                  key={option.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/50">
+                    <Icon className="w-4 h-4 text-orange-500" />
+                    {option.label}
+                  </div>
+
+                  {result.loading && (
+                    <div className="flex items-center justify-center h-64 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                        <p className="text-sm text-white/40">Generating...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {result.error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400 text-sm">
+                      <AlertCircle className="w-5 h-5 shrink-0" />
+                      <p>{result.error}</p>
+                    </div>
+                  )}
+
+                  {result.image && (
+                    <div className="space-y-4">
+                      <img
+                        src={result.image}
+                        alt={`${option.label} mockup`}
+                        className="w-full rounded-3xl shadow-2xl shadow-black/50 border border-white/10"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => downloadMockup(result.image!, option.id)}
+                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download {option.label}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
         )}
       </div>
     </motion.div>
