@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Download, RefreshCw, MessageSquare, Pencil, Layout } from "lucide-react";
 
@@ -22,6 +23,40 @@ export default function ResultPage({
   handleStartOver,
   handleGoToMockup,
 }: ResultPageProps) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleMockupClick = async () => {
+    setIsSaving(true);
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+
+      const cleaned = (finalPrompt || 'image')
+        .split(',')[0]
+        .replace(/^(a |an |the |create |generate |make )/i, '')
+        .trim();
+      const sanitized = (cleaned.replace(/[^a-zA-Z0-9 -]/g, '').trim() || 'image').slice(0, 40).replace(/\s+/g, '_');
+      const date = new Date().toISOString().slice(0, 10);
+      const folderName = `${sanitized}_${date}`;
+
+      const subDir = await dirHandle.getDirectoryHandle(folderName, { create: true });
+      const fileHandle = await subDir.getFileHandle('image.png', { create: true });
+      const writable = await fileHandle.createWritable();
+
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      await writable.write(blob);
+      await writable.close();
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setIsSaving(false);
+        return;
+      }
+      console.error('Failed to save image:', err);
+    }
+    setIsSaving(false);
+    handleGoToMockup();
+  };
+
   return (
     <motion.div
       key="result"
@@ -93,11 +128,16 @@ export default function ResultPage({
         </div>
 
         <button
-          onClick={handleGoToMockup}
-          className="w-full h-16 rounded-2xl flex items-center justify-center gap-3 text-lg font-bold bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-white/10 transition-all"
+          onClick={handleMockupClick}
+          disabled={isSaving}
+          className={`w-full h-16 rounded-2xl flex items-center justify-center gap-3 text-lg font-bold transition-all ${
+            isSaving
+              ? 'bg-white/10 text-white/40 cursor-not-allowed'
+              : 'bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-white/10'
+          }`}
         >
           <Layout className="w-6 h-6" />
-          Go to Mockup
+          {isSaving ? 'Saving...' : 'Go to Mockup'}
         </button>
       </div>
     </motion.div>
