@@ -1,0 +1,5 @@
+{
+  "name": "Visionary AI - Image Generator",
+  "description": "Generate stunning images from text descriptions with customizable styles and aspect ratios using Gemini AI.",
+  "requestFramePermissions": []
+}
