@@ -100,6 +100,50 @@ export default function App() {
     link.click();
   };
 
+  const handleModifyImage = async () => {
+    if (!finalPrompt.trim()) {
+      setError('Please enter a modification prompt first.');
+      return;
+    }
+    if (!generatedImage) return;
+
+    setIsGenerating(true);
+    setError(null);
+    setPage('generating');
+
+    try {
+      const response = await fetch('/api/edit-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          image: generatedImage,
+          size: selectedRatio.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Image editing failed.');
+      }
+
+      if (data.image) {
+        setGeneratedImage(data.image);
+        setPage('result');
+      } else {
+        throw new Error('No edited image was generated. Please try a different prompt.');
+      }
+    } catch (err: any) {
+      console.error('Edit error:', err);
+      const message = err.message || 'An unexpected error occurred during editing.';
+      setError(message);
+      setPage('result');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleStartOver = () => {
     setGeneratedImage(null);
     setDescription('');
@@ -146,6 +190,7 @@ export default function App() {
             setFinalPrompt={setFinalPrompt}
             downloadImage={downloadImage}
             handleGenerate={handleGenerate}
+            handleModifyImage={handleModifyImage}
             handleStartOver={handleStartOver}
           />
         )}

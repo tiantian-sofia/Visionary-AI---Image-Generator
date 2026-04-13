@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Download, RefreshCw, MessageSquare } from "lucide-react";
+import { Download, RefreshCw, MessageSquare, Pencil } from "lucide-react";
 
 interface ResultPageProps {
   generatedImage: string;
@@ -7,6 +7,7 @@ interface ResultPageProps {
   setFinalPrompt: (value: string) => void;
   downloadImage: () => void;
   handleGenerate: () => void;
+  handleModifyImage: () => void;
   handleStartOver: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function ResultPage({
   setFinalPrompt,
   downloadImage,
   handleGenerate,
+  handleModifyImage,
   handleStartOver,
 }: ResultPageProps) {
   return (
@@ -71,6 +73,13 @@ export default function ResultPage({
           >
             <Download className="w-4 h-4" />
             Download PNG
+          </button>
+          <button
+            onClick={handleModifyImage}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 border border-orange-400 hover:bg-orange-600 transition-all text-sm font-bold text-white shadow-lg shadow-orange-500/20"
+          >
+            <Pencil className="w-4 h-4" />
+            Modify Image
           </button>
           <button
             onClick={handleStartOver}
