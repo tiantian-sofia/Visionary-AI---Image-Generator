@@ -18,7 +18,7 @@ export default function ElementEditor({
   removeRow,
 }: ElementEditorProps) {
   return (
-    <section className="space-y-4 p-6 rounded-2xl bg-white/5 border border-white/10">
+    <section className="space-y-4 p-4 sm:p-6 rounded-2xl bg-white/5 border border-white/10">
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-semibold uppercase tracking-widest text-white/40 flex items-center gap-2">
           <Settings2 className="w-3 h-3 text-orange-500" />
@@ -40,25 +40,27 @@ export default function ElementEditor({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
-              className="flex gap-3"
+              className="flex flex-col sm:flex-row gap-2 sm:gap-3"
             >
-              <input
-                type="text"
-                value={row.name}
-                onChange={(e) => updateRow(row.id, 'name', e.target.value)}
-                placeholder="Name (e.g. Framing)"
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
-              />
-              <input
-                type="text"
-                value={row.content}
-                onChange={(e) => updateRow(row.id, 'content', e.target.value)}
-                placeholder="Content (e.g. wide shot)"
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
-              />
+              <div className="flex gap-2 sm:gap-3 flex-1">
+                <input
+                  type="text"
+                  value={row.name}
+                  onChange={(e) => updateRow(row.id, 'name', e.target.value)}
+                  placeholder="Name (e.g. Framing)"
+                  className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
+                />
+                <input
+                  type="text"
+                  value={row.content}
+                  onChange={(e) => updateRow(row.id, 'content', e.target.value)}
+                  placeholder="Content (e.g. wide shot)"
+                  className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
+                />
+              </div>
               <button
                 onClick={() => removeRow(row.id)}
-                className="px-3 py-3 rounded-xl bg-white/5 border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                className="self-end sm:self-auto px-3 py-2.5 sm:py-3 rounded-xl bg-white/5 border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

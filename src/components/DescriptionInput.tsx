@@ -17,7 +17,7 @@ export default function DescriptionInput({ description, setDescription }: Descri
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="A futuristic city floating in the clouds at sunset..."
-          className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-6 text-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all resize-none placeholder:text-white/20"
+          className="w-full h-28 sm:h-40 bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all resize-none placeholder:text-white/20"
         />
         <div className="absolute bottom-4 right-4 text-xs text-white/20">
           {description.length} characters

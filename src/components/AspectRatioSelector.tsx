@@ -13,19 +13,19 @@ export default function AspectRatioSelector({ selectedRatio, setSelectedRatio }:
         <Maximize2 className="w-3 h-3 text-orange-500" />
         Aspect Ratio
       </label>
-      <div className="space-y-2">
+      <div className="grid grid-cols-3 sm:grid-cols-1 gap-2">
         {ASPECT_RATIOS.map((ratio) => (
           <button
             key={ratio.id}
             onClick={() => setSelectedRatio(ratio)}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+            className={`flex items-center justify-center sm:justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-sm font-medium transition-all ${
               selectedRatio.id === ratio.id
                 ? 'bg-white/10 border-white/30 text-white'
                 : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/60'
             }`}
           >
             <span>{ratio.label}</span>
-            <span className="opacity-50">{ratio.name}</span>
+            <span className="opacity-50 hidden sm:inline">{ratio.name}</span>
           </button>
         ))}
       </div>

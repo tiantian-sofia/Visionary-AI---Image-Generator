@@ -211,11 +211,11 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <main className="relative max-w-5xl mx-auto px-6 py-12 lg:py-20">
+            <main className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12 lg:py-20">
               <Header />
 
-              <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-                <div className="space-y-8">
+              <div className="grid gap-6 sm:gap-8 lg:grid-cols-[1fr_320px]">
+                <div className="space-y-6 sm:space-y-8">
                   <DescriptionInput description={description} setDescription={setDescription} />
                   <StyleSelector selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle} />
                   <ElementEditor
@@ -227,7 +227,7 @@ export default function App() {
                   />
                 </div>
 
-                <aside className="space-y-8">
+                <aside className="space-y-6 sm:space-y-8">
                   <AspectRatioSelector selectedRatio={selectedRatio} setSelectedRatio={setSelectedRatio} />
                   <PromptPreview
                     finalPrompt={finalPrompt}
