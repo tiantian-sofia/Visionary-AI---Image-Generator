@@ -1,20 +1,17 @@
-import express from 'express';
 import OpenAI from 'openai';
-import dotenv from 'dotenv';
 
-dotenv.config();
+export default async function handler(req: any, res: any) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-const app = express();
-app.use(express.json());
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_API_HOST || undefined,
-});
-
-app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, size } = req.body;
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_API_HOST || undefined,
+    });
 
     const response = await openai.images.generate({
       model: process.env.OPENAI_IMAGE_MODEL || 'dall-e-3',
@@ -36,7 +33,4 @@ app.post('/api/generate-image', async (req, res) => {
     const message = err?.error?.message || err.message || 'Generation failed.';
     res.status(500).json({ error: message });
   }
-});
-
-const PORT = 3001;
-app.listen(PORT, () => console.log(`API server running on port ${PORT}`));
+}
