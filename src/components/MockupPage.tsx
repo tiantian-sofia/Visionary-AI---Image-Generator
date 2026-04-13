@@ -16,7 +16,7 @@ const MOCKUP_OPTIONS = [
     id: 'phone',
     label: 'Phone Mockup',
     icon: Smartphone,
-    prompt: 'Place the provided image on a modern smartphone screen. Show the phone in a 3/4 angle view on a clean minimal background, photorealistic product mockup, professional presentation.',
+    prompt: import.meta.env.VITE_PHONE_MOCKUP_PROMPT || 'Place the provided image on a modern smartphone screen. Show the phone in a 3/4 angle view on a clean minimal background, photorealistic product mockup, professional presentation.',
   },
   {
     id: 'laptop',
@@ -30,7 +30,7 @@ const MOCKUP_OPTIONS = [
     icon: User,
     prompt: 'Transform the provided image into a professional social media profile picture. Circular crop framing, clean background, polished and professional look.',
   },
-] as const;
+] as const satisfies readonly { id: string; label: string; icon: any; prompt: string }[];
 
 type MockupType = typeof MOCKUP_OPTIONS[number]['id'];
 
