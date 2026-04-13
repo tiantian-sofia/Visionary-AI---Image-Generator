@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Download, RefreshCw, MessageSquare, Pencil, Layout } from "lucide-react";
 
@@ -22,6 +23,26 @@ export default function ResultPage({
   handleStartOver,
   handleGoToMockup,
 }: ResultPageProps) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleMockupClick = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/save-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: generatedImage, prompt: finalPrompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('Failed to save image:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to save image:', err);
+    }
+    setIsSaving(false);
+    handleGoToMockup();
+  };
   return (
     <motion.div
       key="result"
@@ -93,11 +114,16 @@ export default function ResultPage({
         </div>
 
         <button
-          onClick={handleGoToMockup}
-          className="w-full h-16 rounded-2xl flex items-center justify-center gap-3 text-lg font-bold bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-white/10 transition-all"
+          onClick={handleMockupClick}
+          disabled={isSaving}
+          className={`w-full h-16 rounded-2xl flex items-center justify-center gap-3 text-lg font-bold transition-all ${
+            isSaving
+              ? 'bg-white/10 text-white/40 cursor-not-allowed'
+              : 'bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-white/10'
+          }`}
         >
           <Layout className="w-6 h-6" />
-          Generate Mockup
+          {isSaving ? 'Saving...' : 'Generate Mockup'}
         </button>
       </div>
     </motion.div>

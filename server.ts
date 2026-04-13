@@ -1,6 +1,9 @@
 import express from 'express';
 import OpenAI, { toFile } from 'openai';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -70,6 +73,45 @@ app.post('/api/edit-image', async (req, res) => {
     console.error('OpenAI edit error:', err);
     const message = err?.error?.message || err.message || 'Image editing failed.';
     res.status(500).json({ error: message });
+  }
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const IMAGES_DIR = path.resolve(__dirname, 'images');
+
+app.post('/api/save-image', async (req, res) => {
+  try {
+    const { image, prompt } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: 'No image provided.' });
+    }
+
+    // Extract subject from prompt
+    const cleaned = (prompt || 'image')
+      .split(',')[0]
+      .replace(/^(a |an |the |create |generate |make )/i, '')
+      .trim();
+    const sanitized = cleaned.replace(/[^a-zA-Z0-9 -]/g, '').trim() || 'image';
+    const subject = sanitized.slice(0, 40).replace(/\s+/g, '_');
+
+    const date = new Date().toISOString().slice(0, 10);
+    const folderName = `${subject}_${date}`;
+    const folderPath = path.join(IMAGES_DIR, folderName);
+
+    fs.mkdirSync(folderPath, { recursive: true });
+
+    // Convert base64 data URI to buffer and write
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const filePath = path.join(folderPath, 'image.png');
+    fs.writeFileSync(filePath, buffer);
+
+    res.json({ folder: folderName, path: filePath });
+  } catch (err: any) {
+    console.error('Save error:', err);
+    res.status(500).json({ error: err.message || 'Failed to save image.' });
   }
 });
 
