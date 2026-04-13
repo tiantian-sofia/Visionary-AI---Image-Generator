@@ -222,7 +222,17 @@ export default function App() {
                 </div>
               </div>
 
-              <p className="text-xs text-white/20 text-center font-mono max-w-lg mx-auto">{finalPrompt}</p>
+              <div className="max-w-lg mx-auto">
+                <label className="text-xs font-semibold uppercase tracking-widest text-white/40 flex items-center gap-2 mb-2">
+                  <MessageSquare className="w-3 h-3 text-orange-500" />
+                  Prompt
+                </label>
+                <textarea
+                  value={finalPrompt}
+                  onChange={(e) => setFinalPrompt(e.target.value)}
+                  className="w-full min-h-[80px] p-4 rounded-xl bg-white/5 border border-white/10 text-xs font-mono leading-relaxed text-white/60 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:text-white transition-all"
+                />
+              </div>
 
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <button
