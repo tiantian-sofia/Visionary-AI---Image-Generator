@@ -3,16 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useMemo, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  Image as ImageIcon, 
-  Sparkles, 
-  Download, 
-  RefreshCw, 
-  Layers, 
-  Maximize2, 
+import {
+  Image as ImageIcon,
+  Sparkles,
+  Download,
+  RefreshCw,
+  Layers,
+  Maximize2,
   AlertCircle,
   Loader2,
   ChevronRight,
@@ -20,17 +19,7 @@ import {
   Trash2,
   Settings2,
   MessageSquare,
-  Key
 } from "lucide-react";
-
-declare global {
-  interface Window {
-    aistudio: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
-  }
-}
 
 interface CustomElement {
   id: string;
@@ -38,8 +27,7 @@ interface CustomElement {
   content: string;
 }
 
-// Initialize Gemini AI (will be re-initialized inside handleGenerate to use latest key)
-const DEFAULT_MODEL = 'gemini-3.1-flash-image-preview';
+const DEFAULT_MODEL = 'dall-e-3';
 
 const STYLES = [
   { id: 'none', name: 'Default', prompt: '' },
@@ -53,11 +41,9 @@ const STYLES = [
 ];
 
 const ASPECT_RATIOS = [
-  { id: '1:1', name: '1:1', label: 'Square' },
-  { id: '4:3', name: '4:3', label: 'Landscape' },
-  { id: '3:4', name: '3:4', label: 'Portrait' },
-  { id: '16:9', name: '16:9', label: 'Widescreen' },
-  { id: '9:16', name: '9:16', label: 'Story' },
+  { id: '1024x1024', name: '1:1', label: 'Square' },
+  { id: '1792x1024', name: '16:9', label: 'Landscape' },
+  { id: '1024x1792', name: '9:16', label: 'Portrait' },
 ];
 
 export default function App() {
@@ -72,28 +58,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [finalPrompt, setFinalPrompt] = useState('');
   const [isManualPrompt, setIsManualPrompt] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(hasKey);
-      } else {
-        // Fallback for environments without the aistudio global
-        setHasApiKey(true);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleSelectKey = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      setHasApiKey(true); // Assume success as per skill guidelines
-    }
-  };
 
   // Auto-sync prompt when inputs change, unless in manual mode
   useMemo(() => {
@@ -124,35 +89,23 @@ export default function App() {
     setGeneratedImage(null);
 
     try {
-      // Create a new instance right before the call to ensure latest key is used
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const response = await ai.models.generateContent({
-        model: DEFAULT_MODEL,
-        contents: {
-          parts: [{ text: finalPrompt }],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: selectedRatio.id as any,
-            imageSize: '1K'
-          },
-        },
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          size: selectedRatio.id,
+        }),
       });
 
-      let imageUrl = null;
-      if (response.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            const base64Data = part.inlineData.data;
-            imageUrl = `data:image/png;base64,${base64Data}`;
-            break;
-          }
-        }
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Generation failed.');
       }
 
-      if (imageUrl) {
-        setGeneratedImage(imageUrl);
+      if (data.image) {
+        setGeneratedImage(data.image);
         // Smooth scroll to result
         setTimeout(() => {
           resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -163,13 +116,6 @@ export default function App() {
     } catch (err: any) {
       console.error('Generation error:', err);
       let message = err.message || 'An unexpected error occurred during generation.';
-      
-      // Handle quota error specifically
-      if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
-        message = 'The shared API quota has been reached. Please select your own API key to continue generating images.';
-        setHasApiKey(false); // Prompt to select key
-      }
-      
       setError(message);
     } finally {
       setIsGenerating(false);
@@ -216,50 +162,6 @@ export default function App() {
       </div>
 
       <main className="relative max-w-5xl mx-auto px-6 py-12 lg:py-20">
-        {/* API Key Selection Overlay */}
-        <AnimatePresence>
-          {hasApiKey === false && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="max-w-md w-full bg-[#111] border border-white/10 rounded-3xl p-8 text-center space-y-6 shadow-2xl"
-              >
-                <div className="w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center mx-auto">
-                  <Key className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold">API Key Required</h2>
-                  <p className="text-white/50 text-sm">
-                    To avoid shared quota limits and generate high-quality images, please select your own Gemini API key.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleSelectKey}
-                    className="w-full py-4 bg-white text-black rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  >
-                    Select API Key
-                  </button>
-                  <a 
-                    href="https://ai.google.dev/gemini-api/docs/billing" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block text-xs text-white/30 hover:text-white/50 transition-colors"
-                  >
-                    Learn about Gemini API billing
-                  </a>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Header */}
         <header className="mb-12 text-center">
           <motion.div 
@@ -269,18 +171,8 @@ export default function App() {
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
               <Sparkles className="w-4 h-4 text-orange-400" />
-              <span className="text-xs font-medium uppercase tracking-widest text-white/70">Powered by Gemini AI</span>
+              <span className="text-xs font-medium uppercase tracking-widest text-white/70">Powered by OpenAI DALL-E</span>
             </div>
-            
-            {hasApiKey && (
-              <button
-                onClick={handleSelectKey}
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] font-semibold uppercase tracking-widest text-orange-400 hover:bg-orange-500/20 transition-all"
-              >
-                <Key className="w-3 h-3" />
-                Change API Key
-              </button>
-            )}
           </motion.div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
@@ -519,7 +411,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="aspect-square max-w-2xl mx-auto rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center gap-6"
-                style={{ aspectRatio: selectedRatio.id.replace(':', '/') }}
+                style={{ aspectRatio: selectedRatio.id.split('x').join('/') }}
               >
                 <div className="relative">
                   <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
@@ -527,7 +419,7 @@ export default function App() {
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-medium text-white/80">Crafting your vision...</p>
-                  <p className="text-sm text-white/40">This usually takes 5-10 seconds</p>
+                  <p className="text-sm text-white/40">This usually takes 10-20 seconds</p>
                 </div>
               </motion.div>
             ) : generatedImage ? (
@@ -588,7 +480,7 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="aspect-square max-w-2xl mx-auto rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-4 text-white/20"
-                style={{ aspectRatio: selectedRatio.id.replace(':', '/') }}
+                style={{ aspectRatio: selectedRatio.id.split('x').join('/') }}
               >
                 <ImageIcon className="w-12 h-12" />
                 <p className="text-sm uppercase tracking-widest font-medium">Your creation will appear here</p>
@@ -601,7 +493,7 @@ export default function App() {
       {/* Footer */}
       <footer className="max-w-5xl mx-auto px-6 py-12 border-t border-white/5 text-center">
         <p className="text-xs text-white/20 uppercase tracking-[0.2em]">
-          Visionary AI &copy; 2024 &bull; Built with Gemini 2.5 Flash Image
+          Visionary AI &copy; 2024 &bull; Built with OpenAI DALL-E 3
         </p>
       </footer>
     </div>
