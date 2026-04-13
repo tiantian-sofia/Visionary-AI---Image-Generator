@@ -28,16 +28,30 @@ export default function ResultPage({
   const handleMockupClick = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch('/api/save-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: generatedImage, prompt: finalPrompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error('Failed to save image:', data.error);
+      const dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+
+      // Build folder name from prompt subject + date
+      const cleaned = (finalPrompt || 'image')
+        .split(',')[0]
+        .replace(/^(a |an |the |create |generate |make )/i, '')
+        .trim();
+      const sanitized = (cleaned.replace(/[^a-zA-Z0-9 -]/g, '').trim() || 'image').slice(0, 40).replace(/\s+/g, '_');
+      const date = new Date().toISOString().slice(0, 10);
+      const folderName = `${sanitized}_${date}`;
+
+      const subDir = await dirHandle.getDirectoryHandle(folderName, { create: true });
+      const fileHandle = await subDir.getFileHandle('image.png', { create: true });
+      const writable = await fileHandle.createWritable();
+
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      await writable.write(blob);
+      await writable.close();
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setIsSaving(false);
+        return;
       }
-    } catch (err) {
       console.error('Failed to save image:', err);
     }
     setIsSaving(false);
